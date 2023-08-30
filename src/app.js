@@ -163,6 +163,34 @@ fastify.route({
   },
 });
 
+fastify.route({
+  method: "POST",
+  url: "/deleteAccount",
+  schema: {
+    querystring: {
+      userId: { type: "number" },
+      password: { type: "string" },
+      deleter: { type: "number" },
+    },
+    response: {
+      200: {
+        type: "object",
+        properties: {
+          status: { type: "string" },
+          code: { type: "number" },
+        },
+      },
+    },
+  },
+  handler: async(request, reply) => {
+    // @ts-ignore
+    const body = JSON.parse(request.body);
+    const { userId, password, deleter } = body;
+    const user = await users.deleteAccount(deleter, userId, password);
+    reply.send({ status: user?.status, code: user?.code });
+  },
+});
+
 
 try {
   await fastify.listen({ port: config.server.port });

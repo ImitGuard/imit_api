@@ -71,10 +71,10 @@ const createUser = async function(username, email, password, accountType){
   return {code: -1, status: "Something went wrong..."};
 };
 
-const deleteUser = async function(username){
+const deleteUser = async function(userId){
   try{
-    await pool.query("DELETE FROM users WHERE username = $1", [username]);
-    await session.deleteAllUserSessions(pool, username);
+    await pool.query("DELETE FROM users WHERE id = $1", [userId]);
+    await session.deleteAllUserSessions(pool, userId);
     return {code: 1, status: "Successfully deleted user..."};
   }
   catch(err){
@@ -107,6 +107,24 @@ const getUserById = async function(userId){
   }
   catch(err){
     Log.error(err);
+  }
+
+  return {code: -1, status: "Something went wrong..."};
+};
+
+const deleteAccount = async function(deleter, userId, password){
+  if((userId !== undefined && userId !== "") && (password !== undefined && password !== "") && (deleter === userId)){
+    const user = await getUserById(userId);
+    if(await argon2.verify(user.user.password, password, { secret: Buffer.from(config.database.password_secret) })){
+      const deleteResult = await deleteUser(userId);
+      return { code: deleteResult.code, status: deleteResult.status};
+    }
+  }
+  else if((userId !== undefined || userId !== "") && (password === undefined || password === "") && (deleter !== userId)){
+    const deleterUser = await getUserById(deleter);
+    if(deleterUser.user.accounttype !== 0) return {code: -9, status: "Not authorized"};
+    const deleteResult = await deleteUser(userId);
+    return { code: deleteResult.code, status: deleteResult.status};
   }
 
   return {code: -1, status: "Something went wrong..."};
@@ -228,4 +246,4 @@ const updateAccount = async function(userId, username, email, password){
   return {code: -1, status: "Something went wrong or nothing was updated..."};
 };
 
-export {pool, logout, deleteUser, createUser, login, emailExists, usernameExists, validateEmail, changeEmail, changeUsername, changePassword, updateAccount, getUserByName, getUserById};
+export {pool, logout, deleteUser, deleteAccount, createUser, login, emailExists, usernameExists, validateEmail, changeEmail, changeUsername, changePassword, updateAccount, getUserByName, getUserById};
