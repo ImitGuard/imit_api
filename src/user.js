@@ -42,6 +42,11 @@ const emailExists = async function(email){
   return false;
 };
 
+const userExists = async function(userId){
+  const result = await pool.query("SELECT * FROM users WHERE id = $1", [userId]);
+  return result.rows.length > 0;
+};
+
 /*
   username: name of the user
   email: email of the user
@@ -54,14 +59,14 @@ const emailExists = async function(email){
     -2: email already exists
     -3: username already exists
 */
-const createUser = async function(username, email, password, accountType){
+const createUser = async function(username, email, password){
   try{
     await pool.query("CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, username VARCHAR(255) NOT NULL, email VARCHAR(255) NOT NULL, password VARCHAR(255) NOT NULL, accountType INT NOT NULL, createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
 
     if(await emailExists(email)) return {code: -2, status: "Email already exists..."};
     if(await usernameExists(username)) return {code: -3, status: "Username already exists..."};
 
-    await pool.query("INSERT INTO users (username, email, password, accountType) VALUES ($1, $2, $3, $4)", [username, email, await password, accountType]);
+    await pool.query("INSERT INTO users (username, email, password, accountType) VALUES ($1, $2, $3, $4)", [username, email, await password, 4]);
     return {code: 1, status: "Successfully registered..."};
   }
   catch(err){
@@ -112,16 +117,25 @@ const getUserById = async function(userId){
   return {code: -1, status: "Something went wrong..."};
 };
 
-const deleteAccount = async function(deleter, userId, password){
-  if((userId !== undefined && userId !== "") && (password !== undefined && password !== "") && (deleter === userId)){
+const deleteAccount = async function(sessionId, deleterId, userId, password){
+  if((userId !== undefined && userId !== "") && (password !== undefined && password !== "") && (deleterId === userId)){
+    // case when user deletes own account
     const user = await getUserById(userId);
     if(await argon2.verify(user.user.password, password, { secret: Buffer.from(config.database.password_secret) })){
       const deleteResult = await deleteUser(userId);
       return { code: deleteResult.code, status: deleteResult.status};
     }
   }
-  else if((userId !== undefined || userId !== "") && (password === undefined || password === "") && (deleter !== userId)){
-    const deleterUser = await getUserById(deleter);
+  else if((userId !== undefined || userId !== "") && (deleterId !== userId)){
+    // case when admin deletes account
+    const user = await getUserById(userId);
+    // if user is admin account, don't delete
+    if(user.user.accounttype === 0) return {code: -9, status: "Not authorized"};
+
+    const validSession = await session.validateSession(pool, deleterId, sessionId);
+    if(!validSession) return {code: -4, status: "Invalid session..."};
+    if(await session.getUserTypeBySession(pool, sessionId) !== 0) return {code: -9, status: "Not authorized"};
+    const deleterUser = await getUserById(deleterId);
     if(deleterUser.user.accounttype !== 0) return {code: -9, status: "Not authorized"};
     const deleteResult = await deleteUser(userId);
     return { code: deleteResult.code, status: deleteResult.status};
@@ -246,4 +260,36 @@ const updateAccount = async function(userId, username, email, password){
   return {code: -1, status: "Something went wrong or nothing was updated..."};
 };
 
-export {pool, logout, deleteUser, deleteAccount, createUser, login, emailExists, usernameExists, validateEmail, changeEmail, changeUsername, changePassword, updateAccount, getUserByName, getUserById};
+const updateAccountType = async function(userId, changerId, sessionId, accountType){
+  if(userId === undefined || userId === "") return {code: -1, status: "Invalid user id..."};
+  if(changerId === undefined || changerId === "") return {code: -1, status: "Invalid changer id..."};
+  if(sessionId === undefined || sessionId === "") return {code: -1, status: "Invalid session id..."};
+  if(accountType === undefined || accountType === "") return {code: -1, status: "Invalid account type..."};
+
+  const validSession = await session.validateSession(pool, changerId, sessionId);
+  if(!validSession) return {code: -4, status: "Invalid session..."};
+  const changerUser = await getUserById(changerId);
+  if(changerUser.user.accounttype !== 0) return {code: -9, status: "Not authorized"};
+
+  pool.query("UPDATE users SET accountType = $1 WHERE id = $2", [accountType, userId]);
+  return {code: 1, status: "Successfully updated account type..."};
+};
+
+export {pool,
+  logout,
+  deleteUser,
+  userExists,
+  deleteAccount,
+  createUser,
+  login,
+  emailExists,
+  usernameExists,
+  validateEmail,
+  changeEmail,
+  changeUsername,
+  changePassword,
+  updateAccount,
+  getUserByName,
+  getUserById,
+  updateAccountType,
+};

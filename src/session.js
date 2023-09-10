@@ -8,10 +8,15 @@ const initDatabase = async function(pool){
 };
 
 const getUserId = async function(pool, sessionId){
-  const hashedSessionId = await argon2.hash(sessionId, { secret: Buffer.from(config.database.session_secret) });
-  const result = await pool.query("SELECT * FROM sessions WHERE id = $1", [hashedSessionId]);
-  if(result.rows.length === 0) return -1;
-  return result.rows[0].userid;
+  const sessions = await pool.query("SELECT * FROM sessions");
+
+  // iterate over sessions and verify with argon2
+  for(const session of sessions.rows){
+    const isMatch = await argon2.verify(session.id, sessionId, { secret: Buffer.from(config.database.session_secret) });
+    if(isMatch) return session.userid;
+  }
+
+  return -1;
 };
 
 const createSession = async function(pool, userId){
@@ -44,10 +49,23 @@ const deleteAllUserSessions = async function(pool, userId){
   await pool.query("DELETE FROM sessions WHERE userId = $1", [userId]);
 };
 
-const validateSession = async function(pool, id){
-  const hashedSessionId = await argon2.hash(id, { secret: Buffer.from(config.database.session_secret) });
-  const result = await pool.query("SELECT * FROM sessions WHERE id = $1", [hashedSessionId]);
-  return result.rows.length > 0;
+const validateSession = async function(pool, userId, sessionId){
+  // get all sessions
+  const sessions = await pool.query("SELECT * FROM sessions WHERE userid = $1", [userId]);
+
+  // iterate over sessions and verify with argon2
+  for(const session of sessions.rows){
+    const isMatch = await argon2.verify(session.id, sessionId, { secret: Buffer.from(config.database.session_secret) });
+    if(isMatch) return true;
+  }
+
+  return false;
 };
 
-export {initDatabase, getUserId, getUserSessions, createSession, deleteSession, deleteAllUserSessions, validateSession};
+const getUserTypeBySession = async function(pool, sessionId){
+  const userId = await getUserId(pool, sessionId);
+  const user = await pool.query("SELECT * FROM users WHERE id = $1", [userId]);
+  return user.rows[0]?.accounttype;
+};
+
+export {initDatabase, getUserId, getUserSessions, createSession, deleteSession, deleteAllUserSessions, validateSession, getUserTypeBySession};

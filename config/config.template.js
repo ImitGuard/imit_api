@@ -14,8 +14,8 @@ export default {
   sessions: {
     cron: {
       enabled: true,
-      interval: 1, // in minutes
-      expire: 2, // in minutes
+      interval: 20, // in minutes
+      expire: 30, // in minutes
     },
   },
 };

@@ -43,9 +43,9 @@ fastify.route({
   handler: async(request, reply) => {
     // @ts-ignore
     const body = JSON.parse(request.body);
-    const { username, email, password, accountType } = body;
+    const { username, email, password } = body;
     const hashedPassword = await argon2.hash(password, { secret: Buffer.from(config.database.password_secret) });
-    const user = await users.createUser(username, email, hashedPassword, accountType);
+    const user = await users.createUser(username, email, hashedPassword);
     reply.send({ status: user?.status, code: user?.code });
   },
 });
@@ -185,8 +185,8 @@ fastify.route({
   handler: async(request, reply) => {
     // @ts-ignore
     const body = JSON.parse(request.body);
-    const { userId, password, deleter } = body;
-    const user = await users.deleteAccount(deleter, userId, password);
+    const { sessionId, userId, password, deleterId } = body;
+    const user = await users.deleteAccount(sessionId, deleterId, userId, password);
     reply.send({ status: user?.status, code: user?.code });
   },
 });
