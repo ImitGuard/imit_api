@@ -1,6 +1,6 @@
 {
   "name": "imitguard_backend",
-  "version": "0.0.1",
+  "version": "0.1",
   "description": "The backend for the ImitGuard website",
   "main": "src/app.js",
   "type": "module",
