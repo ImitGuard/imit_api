@@ -114,6 +114,20 @@ const getUserById = async function(userId){
         Log.error(err);
     }
 
+    return {code: -1, status: "Something went wrong...", user: undefined};
+};
+
+const getIdByName = async function(username){
+    try{
+        const res = await pool.query("SELECT id FROM users WHERE username = $1", [username]);
+        if(res.rows.length === 0) return {code: -1, status: "Invalid username..."};
+
+        return {code: 1, status: "Successfully got user id...", id: res?.rows[0]?.id};
+    }
+    catch(err){
+        Log.error(err);
+    }
+
     return {code: -1, status: "Something went wrong..."};
 };
 
@@ -144,7 +158,7 @@ const deleteAccount = async function(sessionId, deleterId, userId, password){
     return {code: -1, status: "Something went wrong..."};
 };
 
-const login = async function(username, password){
+const loginUser = async function(username, password){
     await session.initDatabase(pool);
     try{
         const res = await pool.query("SELECT * FROM users WHERE username = $1", [username]);
@@ -281,7 +295,7 @@ export {pool,
     userExists,
     deleteAccount,
     createUser,
-    login,
+    loginUser,
     emailExists,
     usernameExists,
     validateEmail,
@@ -291,5 +305,6 @@ export {pool,
     updateAccount,
     getUserByName,
     getUserById,
+    getIdByName,
     updateAccountType,
 };

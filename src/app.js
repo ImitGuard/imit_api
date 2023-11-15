@@ -3,17 +3,10 @@ import cors from "@fastify/cors";
 
 import * as users from "./user.js";
 import { config } from "../config/config.js";
+import { registerRoutes } from "./routes/router.js";
 
 import * as cronScheduler from "./service/cronScheduler.js";
 import Log from "./util/log.js";
-
-//
-import * as register from "./routes/user/register.js";
-import * as login from "./routes/user/login.js";
-import * as logout from "./routes/user/logout.js";
-import * as updateAccount from "./routes/user/updateAccount.js";
-import * as updatePassword from "./routes/user/updatePassword.js";
-import * as deleteAccount from "./routes/user/deleteAccount.js";
 
 const fastify = ffastify({
     logger: true,
@@ -27,16 +20,7 @@ await fastify.register(cors, {
 
 await cronScheduler.scheduleCrons();
 
-const registerRoutes = async() => {
-    await register.handle(fastify);
-    await login.handle(fastify);
-    await logout.handle(fastify);
-    await updateAccount.handle(fastify);
-    await updatePassword.handle(fastify);
-    await deleteAccount.handle(fastify);
-};
-
-await registerRoutes();
+await registerRoutes(fastify);
 
 try {
     await fastify.listen({ port: config.server.port });
