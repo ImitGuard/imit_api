@@ -19,7 +19,9 @@
   },
   "ignorePatterns": [                     // Ignore dist folders and dependencies
       "dist",
-      "node_modules"
+      "node_modules",
+      "tests",
+      "tests-exmaples"
   ],
   "rules": {
     /**

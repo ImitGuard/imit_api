@@ -1,16 +1,8 @@
-import pkg from "pg";
 import cron from "node-cron";
 import { config } from "../../config/config.js";
 import Log from "../util/log.js";
 
 import { deleteSessions } from "../crons/deleteSessions.js";
-
-const pool = new pkg.Pool({
-    user: config.database.username,
-    password: config.database.password,
-    host: config.database.host,
-    database: config.database.database,
-});
 
 const scheduleCrons = async function(){
     Log.wait("Scheduling crons...");
@@ -31,4 +23,4 @@ const scheduleCrons = async function(){
     // await removeOldLogs();
 };
 
-export {pool, scheduleCrons};
+export {scheduleCrons};

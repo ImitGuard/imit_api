@@ -34,7 +34,9 @@ const registerAdminRoutes = async(fastify) => {
 };
 
 export const registerRoutes = async(fastify) => {
+    Log.wait("Registering routes...");
     await registerUserRoutes(fastify);
     await registerReportRoutes(fastify);
     await registerAdminRoutes(fastify);
+    Log.done("Registered routes...");
 };

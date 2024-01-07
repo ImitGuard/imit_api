@@ -1,9 +1,9 @@
 import ffastify from "fastify";
 import cors from "@fastify/cors";
 
-import * as users from "./user.js";
 import { config } from "../config/config.js";
 import { registerRoutes } from "./routes/router.js";
+import { userPool, sessionPool, reportPool } from "./db.js";
 
 import * as cronScheduler from "./service/cronScheduler.js";
 import Log from "./util/log.js";
@@ -34,8 +34,9 @@ catch (err){
 async function shutdown(){
     Log.wait("Shutting down server for ImitGuard...");
     await fastify.close();
-    await cronScheduler.pool.end().then(() => Log.done("Closed session database pool..."));
-    await users.pool.end().then(() => {
+    await sessionPool.end().then(() => Log.done("Closed session database pool..."));
+    await reportPool.end().then(() => Log.done("Closed report database pool..."));
+    await userPool.end().then(() => {
         Log.done("Closed user database pool...");
         process.exit(0);
     });

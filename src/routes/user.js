@@ -76,8 +76,7 @@ export default class User {
                 },
             },
             handler: async(request, reply) => {
-                // @ts-ignore
-                const body = JSON.parse(request.body);
+                const {body} = request;
                 const { username, email, password } = body;
                 const hashedPassword = await argon2.hash(password, { secret: Buffer.from(config.database.password_secret) });
                 const user = await users.createUser(username, email, hashedPassword);
@@ -107,8 +106,7 @@ export default class User {
                 },
             },
             handler: async(request, reply) => {
-                // @ts-ignore
-                const body = JSON.parse(request.body);
+                const {body} = request;
                 const { username, password } = body;
                 const user = await users.loginUser(username, password);
                 const sessionId = await user?.sessionId !== -1 ? await user?.sessionId : -1;
@@ -137,8 +135,7 @@ export default class User {
                 },
             },
             handler: async(request, reply) => {
-                // @ts-ignore
-                const body = JSON.parse(request.body);
+                const {body} = request;
                 const { userId, sessionId } = body;
                 const user = await users.logout(userId, sessionId);
                 reply.send({ status: user?.status, code: user?.code });
@@ -167,8 +164,7 @@ export default class User {
                 },
             },
             handler: async(request, reply) => {
-                // @ts-ignore
-                const body = JSON.parse(request.body);
+                const {body} = request;
                 const { sessionId, userId, password, deleterId } = body;
                 const user = await users.deleteAccount(sessionId, deleterId, userId, password);
                 reply.send({ status: user?.status, code: user?.code });
@@ -198,8 +194,7 @@ export default class User {
                 },
             },
             handler: async(request, reply) => {
-                // @ts-ignore
-                const body = JSON.parse(request.body);
+                const {body} = request;
                 const { userId, username, email, password } = body;
                 const user = await users.updateAccount(userId, username, email, password);
                 reply.send({ status: user?.status, code: user?.code });
@@ -228,8 +223,7 @@ export default class User {
                 },
             },
             handler: async(request, reply) => {
-                // @ts-ignore
-                const body = JSON.parse(request.body);
+                const {body} = request;
                 const { userId, oldPassword, newPassword } = body;
                 const user = await users.changePassword(userId, oldPassword, newPassword);
                 reply.send({ status: user?.status, code: user?.code });
