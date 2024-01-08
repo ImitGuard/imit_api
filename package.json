@@ -20,7 +20,7 @@
   },
   "homepage": "https://github.com/arellak/ImitGuard#readme",
   "dependencies": {
-    "@fastify/cors": "^8.3.0",
+    "@fastify/cors": "^8.5.0",
     "argon2": "^0.31.2",
     "fastify": "^4.25.2",
     "node-cron": "^3.0.3",
