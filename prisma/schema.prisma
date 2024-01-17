@@ -1,0 +1,24 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model sessions {
+  id        String    @id @db.VarChar(255)
+  userid    Int
+  createdat DateTime? @default(now()) @db.Timestamp(6)
+  expiresat DateTime? @default(dbgenerated("(CURRENT_TIMESTAMP + '00:30:00'::interval)")) @db.Timestamp(6)
+}
+
+model users {
+  id          Int       @id @default(autoincrement())
+  username    String    @db.VarChar(255)
+  email       String    @db.VarChar(255)
+  password    String    @db.VarChar(255)
+  accounttype Int
+  createdat   DateTime? @default(now()) @db.Timestamp(6)
+}

@@ -77,7 +77,7 @@ export default class User {
             },
             handler: async(request, reply) => {
                 const {body} = request;
-                const { username, email, password } = body;
+                const { username, email, password } = JSON.parse(body);
                 const hashedPassword = await argon2.hash(password, { secret: Buffer.from(config.database.password_secret) });
                 const user = await users.createUser(username, email, hashedPassword);
                 reply.send({ status: user?.status, code: user?.code });
@@ -107,7 +107,7 @@ export default class User {
             },
             handler: async(request, reply) => {
                 const {body} = request;
-                const { username, password } = body;
+                const { username, password } = JSON.parse(body);
                 const user = await users.loginUser(username, password);
                 const sessionId = await user?.sessionId !== -1 ? await user?.sessionId : -1;
                 reply.send({ status: user?.status, code: user?.code, sessionId});
@@ -136,7 +136,7 @@ export default class User {
             },
             handler: async(request, reply) => {
                 const {body} = request;
-                const { userId, sessionId } = body;
+                const { userId, sessionId } = JSON.parse(body);
                 const user = await users.logout(userId, sessionId);
                 reply.send({ status: user?.status, code: user?.code });
             },
@@ -165,7 +165,7 @@ export default class User {
             },
             handler: async(request, reply) => {
                 const {body} = request;
-                const { sessionId, userId, password, deleterId } = body;
+                const { sessionId, userId, password, deleterId } = JSON.parse(body);
                 const user = await users.deleteAccount(sessionId, deleterId, userId, password);
                 reply.send({ status: user?.status, code: user?.code });
             },
@@ -195,7 +195,7 @@ export default class User {
             },
             handler: async(request, reply) => {
                 const {body} = request;
-                const { userId, username, email, password } = body;
+                const { userId, username, email, password } = JSON.parse(body);
                 const user = await users.updateAccount(userId, username, email, password);
                 reply.send({ status: user?.status, code: user?.code });
             },
@@ -224,7 +224,7 @@ export default class User {
             },
             handler: async(request, reply) => {
                 const {body} = request;
-                const { userId, oldPassword, newPassword } = body;
+                const { userId, oldPassword, newPassword } = JSON.parse(body);
                 const user = await users.changePassword(userId, oldPassword, newPassword);
                 reply.send({ status: user?.status, code: user?.code });
             },

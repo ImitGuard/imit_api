@@ -3,10 +3,11 @@ import cors from "@fastify/cors";
 
 import { config } from "../config/config.js";
 import { registerRoutes } from "./routes/router.js";
-import { userPool, sessionPool, reportPool } from "./db.js";
+import { prisma } from "./db.js";
 
 import * as cronScheduler from "./service/cronScheduler.js";
 import Log from "./util/log.js";
+
 
 const fastify = ffastify({
     logger: true,
@@ -31,16 +32,28 @@ catch (err){
 }
 
 // shutdown handling
-async function shutdown(){
+const shutdown = async() => {
     Log.wait("Shutting down server for ImitGuard...");
-    await fastify.close();
-    await sessionPool.end().then(() => Log.done("Closed session database pool..."));
-    await reportPool.end().then(() => Log.done("Closed report database pool..."));
-    await userPool.end().then(() => {
-        Log.done("Closed user database pool...");
-        process.exit(0);
-    });
-}
+
+    try{
+        await prisma.$disconnect();
+        Log.info("Prisma client disconnected successfully.");
+    }
+    catch (error){
+        Log.error("Error disconnecting Prisma client:", error);
+    }
+
+    try {
+        await fastify.close();
+        Log.info("Fastify server closed successfully.");
+    }
+    catch (error){
+        Log.error("Error closing Fastify server:", error);
+    }
+
+    Log.done("Shutdown server for ImitGuard...");
+    process.exit(0); // Ensure the process exits after the shutdown is complete
+};
 
 process.on("SIGTERM", shutdown);
 process.on("SIGINT", shutdown);

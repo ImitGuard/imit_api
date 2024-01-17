@@ -1,6 +1,5 @@
 {
   "name": "imitguard_backend",
-  "version": "0.1",
   "description": "The backend for the ImitGuard website",
   "main": "src/app.js",
   "type": "module",
@@ -20,7 +19,10 @@
   },
   "homepage": "https://github.com/arellak/ImitGuard#readme",
   "dependencies": {
+    "@fastify/cookie": "^9.3.0",
     "@fastify/cors": "^8.3.0",
+    "@fastify/session": "^10.7.0",
+    "@prisma/client": "^5.8.1",
     "argon2": "^0.31.0",
     "fastify": "^4.21.0",
     "node-cron": "^3.0.2",
@@ -30,8 +32,8 @@
   "devDependencies": {
     "@babel/core": "^7.22.10",
     "@babel/eslint-parser": "^7.22.10",
-    "@playwright/test": "^1.40.1",
     "@types/node": "^20.10.7",
-    "eslint": "^8.47.0"
+    "eslint": "^8.47.0",
+    "prisma": "^5.8.1"
   }
 }

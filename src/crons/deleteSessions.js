@@ -1,10 +1,19 @@
 import Log from "../util/log.js";
-import { sessionPool } from "../db.js";
+import { prisma } from "../db.js";
 
 export const deleteSessions = async function(){
     try{
-        const deletedSessions = await sessionPool.query("DELETE FROM sessions WHERE expiresAt < NOW()");
-        Log.info(`Purged ${deletedSessions.rowCount} sessions...`);
+        // ugly workaround since there is no native way to define the timezone in prisma
+        const updatedDate = new Date(new Date().toLocaleString("sv-SE", { timeZone: "UTC" }));
+        Log.info("" + updatedDate);
+        const deletedSessions = await prisma.sessions.deleteMany({
+            where: {
+                expiresat: {
+                    gt: updatedDate,
+                },
+            },
+        });
+        Log.info(`Purged ${deletedSessions.count} sessions...`);
     }
     catch(err){
         Log.error(err);

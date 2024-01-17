@@ -1,6 +1,6 @@
 import * as argon2 from "argon2";
 
-import { userPool as pool } from "./db.js";
+import { prisma } from "./db.js";
 import { config } from "../config/config.js";
 import * as session from "./session.js";
 import Log from "./util/log.js";
@@ -14,8 +14,15 @@ const validateEmail = (email) => {
 
 const usernameExists = async(username) => {
     try {
-        const res = await pool.query("SELECT * FROM users WHERE username = $1", [username]);
-        if(res.rows.length > 0) return true;
+        const result = await prisma.users.findMany({
+            where: {
+                username: {
+                    equals: username,
+                },
+            },
+        });
+
+        if(result.length > 0) return true;
     }
     catch(err){
         Log.error(err);
@@ -28,8 +35,14 @@ const emailExists = async(email) => {
     if(!validateEmail(email)) return false;
 
     try {
-        const res = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
-        if(res.rows.length > 0) return true;
+        const result = await prisma.users.findMany({
+            where: {
+                email: {
+                    equals: email,
+                },
+            },
+        });
+        if(result.length > 0) return true;
     }
     catch(err){
         Log.error(err);
@@ -38,20 +51,33 @@ const emailExists = async(email) => {
 };
 
 const userExists = async function(userId){
-    const result = await pool.query("SELECT * FROM users WHERE id = $1", [userId]);
-    return result.rows.length > 0;
+    const result = await prisma.users.findMany({
+        where: {
+            id: {
+                equals: userId,
+            },
+        },
+    });
+    return result.length > 0;
 };
 
 const createUser = async(username, email, password) => {
     try{
-        await pool.query("CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, username VARCHAR(255) NOT NULL, " +
-            "email VARCHAR(255) NOT NULL, password VARCHAR(255) NOT NULL, accountType INT NOT NULL, createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
-
         if(await emailExists(email)) return {code: -6, status: "Email already exists..."};
         if(await usernameExists(username)) return {code: -5, status: "Username already exists..."};
 
-        await pool.query("INSERT INTO users (username, email, password, accountType) VALUES ($1, $2, $3, $4)",
-            [username, email, await password, 4]);
+        await prisma.users.create({
+            data: {
+                username,
+                email,
+                password,
+                accounttype: 4,
+            },
+        }).catch(e => {
+            Log.error(e);
+            return {code: -1, status: "Something went wrong while creating your account..."};
+        });
+
         return {code: 1, status: "Successfully registered..."};
     }
     catch(err){
@@ -62,30 +88,38 @@ const createUser = async(username, email, password) => {
 };
 
 const deleteUser = async(userId) => {
-    try{
-        await pool.query("DELETE FROM users WHERE id = $1", [userId]);
-        await session.deleteAllUserSessions(userId);
-        return {code: 1, status: "Successfully deleted user..."};
-    }
-    catch(err){
-        Log.error(err);
-    }
+    await prisma.users.delete({
+        where: {
+            id: userId,
+        },
+    }).catch(error => {
+        Log.error(error);
+        return {code: -1, status: "Something went wrong..."};
+    });
 
-    return {code: -1, status: "Something went wrong..."};
+    await session.deleteAllUserSessions(userId);
+    return {code: 1, status: "Successfully deleted user..."};
 };
 
 // doesnt need more verification because you verify when you call the method and the endpoint will never be public
 const getUserByName = async(username, requesterId) => {
     try{
-        const requesterRes = await pool.query("select * from users where id = $1", [requesterId]);
-        if(requesterRes.rows.length === 0) return {code: -3, status: "Invalid Requester"};
-        if(requesterRes.rows[0].accounttype !== 4) return {code: -9, status: "Not authorized"};
+        const requesterResult = await prisma.users.findUnique({
+            where: {
+                id: requesterId,
+            },
+        });
+        if(!requesterResult) return {code: -3, status: "Invalid Requester"};
+        if(requesterResult?.accounttype !== 4 && requesterResult.id !== requesterId) return {code: -9, status: "Not authorized"};
 
+        const result = await prisma.users.findFirst({
+            where: {
+                username,
+            },
+        });
+        if(!result) return {code: -8, status: "Invalid username..."};
 
-        const res = await pool.query("SELECT * FROM users WHERE username = $1", [username]);
-        if(res.rows.length === 0) return {code: -8, status: "Invalid username..."};
-
-        return {code: 1, status: "Successfully got user...", user: res.rows[0]};
+        return {code: 1, status: "Successfully got user...", user: result};
     }
     catch(err){
         Log.error(err);
@@ -96,10 +130,14 @@ const getUserByName = async(username, requesterId) => {
 
 const getUserById = async(userId) => {
     try{
-        const res = await pool.query("SELECT * FROM users WHERE id = $1", [userId]);
-        if(res.rows.length === 0) return {code: -1, status: "Invalid user id..."};
+        const result = await prisma.users.findUnique({
+            where: {
+                id: userId,
+            },
+        });
+        if(!result) return {code: -1, status: "Invalid user id..."};
 
-        return {code: 1, status: "Successfully got user...", user: res.rows[0]};
+        return {code: 1, status: "Successfully got user...", user: result};
     }
     catch(err){
         Log.error(err);
@@ -111,7 +149,7 @@ const getUserById = async(userId) => {
 const isAdmin = async(userId) => {
     const adminUser = await getUserById(userId);
     if(adminUser === undefined) return {code: -3, status: "Admin User not found..."};
-    if(adminUser.user.accounttype !== 0) return {code: -9, status: "Not authorized..."};
+    if(adminUser.user?.accounttype !== 0) return {code: -9, status: "Not authorized..."};
 
     return {code: 1, status: "Is Admin"};
 };
@@ -125,10 +163,16 @@ const isValidSession = async(userId, sessionId) => {
 
 const getIdByName = async(username) => {
     try{
-        const res = await pool.query("SELECT id FROM users WHERE username = $1", [username]);
-        if(res.rows.length === 0) return {code: -1, status: "Invalid username..."};
-
-        return {code: 1, status: "Successfully got user id...", id: res?.rows[0]?.id};
+        const result = await prisma.users.findFirst({
+            select: {
+                id: true,
+            },
+            where: {
+                username,
+            },
+        });
+        if(!result) return {code: -1, status: "Invalid username..."};
+        return {code: 1, status: "Successfully got user id...", id: result.id};
     }
     catch(err){
         Log.error(err);
@@ -143,8 +187,9 @@ const deleteAccount = async(sessionId, adminId, userId, password) => {
         && ((adminId === userId || adminId === undefined || adminId === ""))){
         // case when user deletes own account
         const user = await getUserById(userId);
+
         if(!user) return {code: -3, status: "Invalid user..."};
-        if(await argon2.verify(user.user.password, password, { secret: PASSWORD_SECRET })){
+        if(await argon2.verify(user.user?.password ?? "default_password", password, { secret: PASSWORD_SECRET })){
             const deleteResult = await deleteUser(userId);
             return { code: deleteResult.code, status: deleteResult.status};
         }
@@ -158,7 +203,7 @@ const deleteAccount = async(sessionId, adminId, userId, password) => {
 
         const toDeleteUser = await getUserById(userId);
         // if user is admin account, don't delete
-        if(toDeleteUser.user.accounttype === 0) return {code: -9, status: "Not authorized, User is admin"};
+        if(toDeleteUser.user?.accounttype === 0) return {code: -9, status: "Not authorized, User is admin"};
 
         // check if session of admin is valid, otherwise logout
         const validSession = await isValidSession(adminId, sessionId);
@@ -172,12 +217,18 @@ const deleteAccount = async(sessionId, adminId, userId, password) => {
 };
 
 const loginUser = async(username, password) => {
-    await session.initDatabase();
     try{
-        const res = await pool.query("SELECT * FROM users WHERE username = $1", [username]);
-        if(res.rows.length === 0) return {sessionId: -1, code: -1, status: "Invalid username..."};
+        const user = await prisma.users.findFirst({
+            select: {
+                id: true,
+                password: true,
+            },
+            where: {
+                username,
+            },
+        });
+        if(!user) return {sessionId: -1, code: -8, status: "Invalid username..."};
 
-        const user = res.rows[0];
         if(await argon2.verify(user.password, password, { secret: Buffer.from(PASSWORD_SECRET) })){
             const sessionId = session.createSession(user.id);
             return {sessionId, code: 1, status: "Successfully logged in..."};
@@ -210,13 +261,23 @@ const logout = async(userId, sessionId) => {
 
 const changeEmail = async(userId, email, password) => {
     try{
-        const res = await pool.query("SELECT * FROM users WHERE id = $1", [userId]);
-        if(res.rows.length === 0) return {code: -1, status: "Invalid user id..."};
-        if(email === res.rows[0].email) return {code: -2, status: "Email is the same..."};
+        const res = await getUserById(userId);
+        if(res.code !== 1) return {code: -1, status: "Invalid user id..."};
+        if(email === res.user?.email) return {code: -2, status: "Email is the same..."};
 
-        const user = res.rows[0];
-        if(await argon2.verify(user.password, password, { secret: PASSWORD_SECRET })){
-            await pool.query("UPDATE users SET email = $1 WHERE id = $2", [email, userId]);
+        const user = res?.user;
+        if(await argon2.verify(user?.password || "default_password", password, { secret: PASSWORD_SECRET })){
+            const result = await prisma.users.update({
+                where: {
+                    id: userId,
+                },
+                data: {
+                    email,
+                },
+            });
+
+            if(!result) return {code: -1, status: "Something went wrong..."};
+
             return {code: 1, status: "Successfully changed email..."};
         }
 
@@ -231,13 +292,20 @@ const changeEmail = async(userId, email, password) => {
 
 const changeUsername = async(userId, newUsername, password) => {
     try{
-        const res = await pool.query("SELECT * FROM users WHERE id = $1", [userId]);
-        if(res.rows.length === 0) return {code: -3, status: "Invalid user..."};
-        if(newUsername === res.rows[0].username) return {code: -4, status: "Username is the same..."};
+        const user = await getUserById(userId);
+        if(!user) return {code: -3, status: "Invalid user..."};
+        if(newUsername === user.username) return {code: -4, status: "Username is the same..."};
 
-        const user = res.rows[0];
         if(await argon2.verify(user.password, password, { secret: PASSWORD_SECRET })){
-            await pool.query("UPDATE users SET username = $1 WHERE id = $2", [newUsername, userId]);
+            const result = await prisma.users.update({
+                where: {
+                    id: userId,
+                },
+                data: {
+                    username: newUsername,
+                },
+            });
+            if(!result) return {code: -1, status: "Something went wrong while updating..."};
             return {code: 1, status: "Successfully changed username..."};
         }
 
@@ -253,11 +321,19 @@ const changeUsername = async(userId, newUsername, password) => {
 const changePassword = async(userId, password, newPassword) => {
     try{
         const user = await getUserById(userId);
-        if(await argon2.verify(user.user.password, password, { secret: PASSWORD_SECRET })){
-            if(await argon2.verify(user.user.password, newPassword, { secret: PASSWORD_SECRET })) return {code: -1, status: "New password is the same..."};
+        if(await argon2.verify(user.user?.password || "default_password", password, { secret: PASSWORD_SECRET })){
+            if(await argon2.verify(user.user?.password || "default_password", newPassword, { secret: PASSWORD_SECRET })) return {code: -1, status: "New password is the same..."};
             const hashedNewPassword = await argon2.hash(newPassword, { secret: PASSWORD_SECRET });
 
-            await pool.query("UPDATE users SET password = $1 WHERE id = $2", [hashedNewPassword, userId]);
+            const result = await prisma.users.update({
+                where: {
+                    id: userId,
+                },
+                data: {
+                    password: hashedNewPassword,
+                },
+            });
+            if(!result) return {code: -1, status: "Something went wrong while updating..."};
             return {code: 1, status: "Successfully changed password..."};
         }
 
@@ -298,9 +374,18 @@ const updateAccountType = async(userId, changerId, sessionId, accountType) => {
     if(!validSession) return {code: -7, status: "Invalid session..."};
 
     const changerUser = await getUserById(changerId);
-    if(changerUser.user.accounttype !== 0) return {code: -9, status: "Not authorized"};
+    if(changerUser.user?.accounttype !== 0) return {code: -9, status: "Not authorized"};
 
-    pool.query("UPDATE users SET accountType = $1 WHERE id = $2", [accountType, userId]);
+    const result = await prisma.users.update({
+        where: {
+            id: userId,
+        },
+        data: {
+            accounttype: accountType,
+        },
+    });
+
+    if(!result) return {code: -1, status: "Something went wrong while updating..."};
     return {code: 1, status: "Successfully updated account type..."};
 };
 
