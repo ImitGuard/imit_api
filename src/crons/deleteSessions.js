@@ -3,13 +3,13 @@ import { prisma } from "../db.js";
 
 export const deleteSessions = async function(){
     try{
-        // TODO ugly workaround since there is no native way to define the timezone in prisma - still no fix
+        // ugly workaround since there is no native way to define the timezone in prisma - still no fix
         const updatedDate = new Date(new Date().toLocaleString("sv-SE", { timeZone: "UTC" }));
         Log.info("" + updatedDate);
         const deletedSessions = await prisma.sessions.deleteMany({
             where: {
                 expiresat: {
-                    gt: updatedDate,
+                    lt: updatedDate,
                 },
             },
         });
