@@ -10,8 +10,8 @@ datasource db {
 model sessions {
   id        String    @id @db.VarChar(255)
   userid    Int
-  createdat DateTime? @default(now()) @db.Timestamp(6)
-  expiresat DateTime? @default(dbgenerated("(CURRENT_TIMESTAMP + '00:30:00'::interval)")) @db.Timestamp(6)
+  createdat DateTime? @default(now()) @db.Timestamptz(3)
+  expiresat DateTime? @default(dbgenerated("(CURRENT_TIMESTAMP + '00:30:00'::interval)")) @db.Timestamptz(3)
 }
 
 model users {
