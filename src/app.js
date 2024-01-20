@@ -23,7 +23,7 @@ const registerPlugins = async() => {
     await fastify.register(fastifyCookie);
     await fastify.register(fastifySession, {
         cookieName: "sessionId",
-        secret: "nhBXatZVvXG8*uH9H6xwRz35is4r3uyG35A8rm2k^!",
+        secret: config.sessions.secret,
         cookie: {
             secure: false,
             maxAge: 18000000,
@@ -32,7 +32,7 @@ const registerPlugins = async() => {
 };
 
 const addFastifyHooks = async() => {
-    await fastify.addHook("preHandler", (request, reply, next) => {
+    fastify.addHook("preHandler", (request, reply, next) => {
         request.session.user = {};
     });
 };
