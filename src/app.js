@@ -1,5 +1,7 @@
 import ffastify from "fastify";
 import cors from "@fastify/cors";
+import fastifyCookie from "@fastify/cookie";
+import fastifySession from "@fastify/session";
 
 import { config } from "../config/config.js";
 import { registerRoutes } from "./routes/router.js";
@@ -13,23 +15,45 @@ const fastify = ffastify({
     logger: true,
 });
 
+const registerPlugins = async() => {
+    await fastify.register(cors, {
+        origin: "*",
+    });
+
+    await fastify.register(fastifyCookie);
+    await fastify.register(fastifySession, {
+        cookieName: "sessionId",
+        secret: "nhBXatZVvXG8*uH9H6xwRz35is4r3uyG35A8rm2k^!",
+        cookie: {
+            secure: false,
+            maxAge: 18000000,
+        },
+    });
+};
+
+const addFastifyHooks = async() => {
+    await fastify.addHook("preHandler", (request, reply, next) => {
+        request.session.user = {};
+    });
+};
+
+const start = async() => {
+    await registerPlugins();
+    await cronScheduler.scheduleCrons();
+
+    await registerRoutes(fastify);
+
+    try {
+        await fastify.listen({ port: config.server.port });
+    }
+    catch (err){
+        fastify.log.error(err);
+        process.exit(1);
+    }
+};
+
 Log.wait("Starting server for ImitGuard...");
-
-await fastify.register(cors, {
-    origin: "*",
-});
-
-await cronScheduler.scheduleCrons();
-
-await registerRoutes(fastify);
-
-try {
-    await fastify.listen({ port: config.server.port });
-}
-catch (err){
-    fastify.log.error(err);
-    process.exit(1);
-}
+await start();
 
 // shutdown handling
 const shutdown = async() => {
