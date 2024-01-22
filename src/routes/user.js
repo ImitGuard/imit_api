@@ -100,7 +100,6 @@ export default class User {
                         properties: {
                             status: { type: "string" },
                             code: { type: "number" },
-                            sessionId: { type: "string" },
                         },
                     },
                 },
@@ -108,16 +107,21 @@ export default class User {
             handler: async(request, reply) => {
                 const {body} = request;
                 const { username, password } = JSON.parse(body);
-                // const sessionId = await user?.sessionId !== -1 ? await user?.sessionId : -1;
                 const result = await users.loginUser(username, password);
 
-                const sessionId = await request.session.get("sid");
-                if(sessionId){
-                    await reply.code(200).send({ status: "You're already logged in", code: -1, sessionId: undefined });
+                const session = await request.sessionStore.getByUserId(result.user?.id, (err) => {
+                    if(err) console.log(err);
+                });
+
+                if(result.user && result.code === 1 && !session){
+                    request.session.userId = result.user.id;
+                    await request.sessionStore.set(request.session.sessionId, request.session, (err) => {
+                        if(err) console.log(err);
+                    });
+                    await reply.code(result.code === 1 ? 200 : 401).send({ status: result?.status, code: result?.code });
                 }
                 else{
-                    await request.session.set(result.user?.id, request.session, request.session.expire);
-                    await reply.code(result.code === 1 ? 200 : 401).send({ status: result?.status, code: result?.code, sessionId: undefined });
+                    reply.code(401).send({ status: "You're already logged in.", code: -9 });
                 }
             },
         });
@@ -128,9 +132,6 @@ export default class User {
             method: "GET",
             url: "/loggedIn",
             schema: {
-                queryString: {
-                    sessionId: {type: "string"},
-                },
                 response: {
                     200: {
                         type: "object",
@@ -141,11 +142,9 @@ export default class User {
                     },
                 },
             },
-            preHandler: async(request) => {
-                console.log(request.session.get("sessionId"));
-            },
             handler: async(request, reply) => {
                 // const sessionId = await user?.sessionId !== -1 ? await user?.sessionId : -1
+
                 reply.code(200).send({ status: "Test", code: 1 });
             },
         });

@@ -230,8 +230,7 @@ const loginUser = async(username, password) => {
         if(!user) return {sessionId: -1, code: -8, status: "Invalid username..."};
 
         if(await argon2.verify(user.password, password, { secret: Buffer.from(PASSWORD_SECRET) })){
-            const sessionId = session.createSession(user.id);
-            return {sessionId, code: 1, status: "Successfully logged in...", user};
+            return {code: 1, status: "Successfully logged in...", user};
         }
 
         return {sessionId: -1, code: -2, status: "Invalid password..."};

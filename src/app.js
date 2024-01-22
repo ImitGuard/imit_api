@@ -2,9 +2,8 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import fastifyCookie from "@fastify/cookie";
-import fastifySession from "@mgcrea/fastify-session";
-// import ConnectPgSimple from "connect-pg-simple";
-import PrismaStore from "@mgcrea/fastify-session-prisma-store";
+import fastifySession from "@fastify/session";
+import PrismaStore from "./PrismaStore.js";
 
 import { config } from "../config/config.js";
 import { registerRoutes } from "./routes/router.js";
@@ -17,8 +16,6 @@ import Log from "./util/log.js";
 const fastify = Fastify({
     logger: true,
 });
-// @ts-ignore
-// const PgSessionStore = ConnectPgSimple(fastifySession);
 
 const registerPlugins = async() => {
     await fastify.register(cors, {

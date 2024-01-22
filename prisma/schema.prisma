@@ -24,10 +24,18 @@ model users {
 }
 
 model session {
-  id        BigInt   @id @default(autoincrement()) @db.BigInt
-  sid       String   @unique
-  expires   DateTime
-  data      Json
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+    id              BigInt   @id @default(autoincrement()) @db.BigInt
+    sessionId       String   @unique
+    userId          String
+    expires         DateTime
+    createdAt       DateTime @default(now())
+    updatedAt       DateTime @updatedAt
+    originalMaxAge  BigInt @db.BigInt
+    maxAge          BigInt @db.BigInt
+    signed          Boolean
+    httpOnly        Boolean
+    path            String @default("/")
+    domain          String
+    secure          Boolean @default(true)
+    sameSite        Boolean
 }
