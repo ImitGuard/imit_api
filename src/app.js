@@ -1,7 +1,10 @@
-import ffastify from "fastify";
+/* eslint-disable new-cap */
+import Fastify from "fastify";
 import cors from "@fastify/cors";
 import fastifyCookie from "@fastify/cookie";
-import fastifySession from "@fastify/session";
+import fastifySession from "@mgcrea/fastify-session";
+// import ConnectPgSimple from "connect-pg-simple";
+import PrismaStore from "@mgcrea/fastify-session-prisma-store";
 
 import { config } from "../config/config.js";
 import { registerRoutes } from "./routes/router.js";
@@ -11,9 +14,11 @@ import * as cronScheduler from "./service/cronScheduler.js";
 import Log from "./util/log.js";
 
 
-const fastify = ffastify({
+const fastify = Fastify({
     logger: true,
 });
+// @ts-ignore
+// const PgSessionStore = ConnectPgSimple(fastifySession);
 
 const registerPlugins = async() => {
     await fastify.register(cors, {
@@ -27,13 +32,12 @@ const registerPlugins = async() => {
         cookie: {
             secure: false,
             maxAge: 18000000,
+            httpOnly: false,
+            sameSite: "none",
+            domain: "http://127.0.0.1:3000/",
         },
-    });
-};
-
-const addFastifyHooks = async() => {
-    fastify.addHook("preHandler", (request, reply, next) => {
-        request.session.user = {};
+        saveUninitialized: false,
+        store: new PrismaStore({ prisma }),
     });
 };
 
@@ -58,6 +62,8 @@ await start();
 // shutdown handling
 const shutdown = async() => {
     Log.wait("Shutting down server for ImitGuard...");
+
+    // await sessionPool.end().then(() => Log.done("Closed session database pool..."));
 
     try{
         await prisma.$disconnect();

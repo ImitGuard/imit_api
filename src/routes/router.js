@@ -9,6 +9,7 @@ const registerUserRoutes = async(fastify) => {
     await user.get();
     await user.register();
     await user.login();
+    await user.loggedIn();
     await user.logout();
     await user.delete();
     await user.updateAccount();

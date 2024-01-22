@@ -2,7 +2,6 @@ import * as argon2 from "argon2";
 
 import { config } from "../../config/config.js";
 import * as users from "../user.js";
-
 export default class User {
     constructor(fastify){
         this.fastify = fastify;
@@ -109,9 +108,45 @@ export default class User {
             handler: async(request, reply) => {
                 const {body} = request;
                 const { username, password } = JSON.parse(body);
-                const user = await users.loginUser(username, password);
-                const sessionId = await user?.sessionId !== -1 ? await user?.sessionId : -1;
-                reply.code(user.code === 1 ? 200 : 401).send({ status: user?.status, code: user?.code, sessionId});
+                // const sessionId = await user?.sessionId !== -1 ? await user?.sessionId : -1;
+                const result = await users.loginUser(username, password);
+
+                const sessionId = await request.session.get("sid");
+                if(sessionId){
+                    await reply.code(200).send({ status: "You're already logged in", code: -1, sessionId: undefined });
+                }
+                else{
+                    await request.session.set(result.user?.id, request.session, request.session.expire);
+                    await reply.code(result.code === 1 ? 200 : 401).send({ status: result?.status, code: result?.code, sessionId: undefined });
+                }
+            },
+        });
+    }
+
+    async loggedIn(){
+        this.fastify.route({
+            method: "GET",
+            url: "/loggedIn",
+            schema: {
+                queryString: {
+                    sessionId: {type: "string"},
+                },
+                response: {
+                    200: {
+                        type: "object",
+                        properties: {
+                            status: { type: "string" },
+                            code: { type: "number" },
+                        },
+                    },
+                },
+            },
+            preHandler: async(request) => {
+                console.log(request.session.get("sessionId"));
+            },
+            handler: async(request, reply) => {
+                // const sessionId = await user?.sessionId !== -1 ? await user?.sessionId : -1
+                reply.code(200).send({ status: "Test", code: 1 });
             },
         });
     }
@@ -121,9 +156,8 @@ export default class User {
             method: "POST",
             url: "/logout",
             schema: {
-                querystring: {
-                    userId: { type: "number" },
-                    sessionId: { type: "string" },
+                queryString: {
+                    sessionId: {type: "string"},
                 },
                 response: {
                     200: {
@@ -136,10 +170,16 @@ export default class User {
                 },
             },
             handler: async(request, reply) => {
-                const {body} = request;
-                const { userId, sessionId } = JSON.parse(body);
-                const user = await users.logout(userId, sessionId);
-                reply.code(user.code === 1 ? 200 : 400).send({ status: user?.status, code: user?.code });
+                const { body } = request;
+                const { sessionId } = JSON.parse(body);
+                const realSessionId = sessionId.split(".")[0];
+                const session = request.sessionStore.store.get(realSessionId);
+                console.log("session in store: ", session);
+                if(session){
+                    reply.code(200).send({ status: "Logged out", code: 1 });
+                    return;
+                }
+                reply.code(200).send({ status: "Something went wrong", code: -1 });
             },
         });
     }

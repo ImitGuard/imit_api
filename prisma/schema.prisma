@@ -22,3 +22,12 @@ model users {
   accounttype Int
   createdat   DateTime? @default(now()) @db.Timestamp(6)
 }
+
+model session {
+  id        BigInt   @id @default(autoincrement()) @db.BigInt
+  sid       String   @unique
+  expires   DateTime
+  data      Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
