@@ -1,9 +1,8 @@
-/* eslint-disable new-cap */
-import Fastify from "fastify";
+import ffastify from "fastify";
 import cors from "@fastify/cors";
 import fastifyCookie from "@fastify/cookie";
 import fastifySession from "@fastify/session";
-import PrismaStore from "./PrismaStore.js";
+import PrismaStore from "@arellak/fastify-session-prisma-store";
 
 import { config } from "../config/config.js";
 import { registerRoutes } from "./routes/router.js";
@@ -13,7 +12,7 @@ import * as cronScheduler from "./service/cronScheduler.js";
 import Log from "./util/log.js";
 
 
-const fastify = Fastify({
+const fastify = ffastify({
     logger: true,
 });
 
@@ -59,8 +58,6 @@ await start();
 // shutdown handling
 const shutdown = async() => {
     Log.wait("Shutting down server for ImitGuard...");
-
-    // await sessionPool.end().then(() => Log.done("Closed session database pool..."));
 
     try{
         await prisma.$disconnect();
