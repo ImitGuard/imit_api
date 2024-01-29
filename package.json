@@ -33,7 +33,7 @@
   "devDependencies": {
     "@babel/core": "^7.23.7",
     "@babel/eslint-parser": "^7.23.3",
-    "@types/node": "^20.11.5",
+    "@types/node": "^20.11.10",
     "eslint": "^8.56.0",
     "prisma": "^5.8.1"
   }
