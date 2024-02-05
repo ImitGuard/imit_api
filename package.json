@@ -35,6 +35,6 @@
     "@babel/eslint-parser": "^7.23.10",
     "@types/node": "^20.11.14",
     "eslint": "^8.56.0",
-    "prisma": "^5.8.1"
+    "prisma": "^5.9.1"
   }
 }
