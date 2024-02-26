@@ -34,7 +34,7 @@
     "@babel/core": "^7.23.9",
     "@babel/eslint-parser": "^7.23.10",
     "@types/node": "^20.11.19",
-    "eslint": "^8.56.0",
+    "eslint": "^8.57.0",
     "prisma": "^5.9.1"
   }
 }
