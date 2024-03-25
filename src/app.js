@@ -2,7 +2,7 @@ import ffastify from "fastify";
 import cors from "@fastify/cors";
 import fastifyCookie from "@fastify/cookie";
 import fastifySession from "@fastify/session";
-import PrismaStore from "@arellak/fastify-session-prisma-store";
+import PrismaStore from "./PrismaStore.js";
 
 import { config } from "../config/config.js";
 import { registerRoutes } from "./routes/router.js";
