@@ -30,7 +30,7 @@
     "uuid": "^9.0.1"
   },
   "devDependencies": {
-    "@babel/core": "^7.24.0",
+    "@babel/core": "^7.24.3",
     "@babel/eslint-parser": "^7.24.1",
     "@types/node": "^20.11.30",
     "eslint": "^8.57.0",
