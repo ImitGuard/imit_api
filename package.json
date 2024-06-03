@@ -24,7 +24,7 @@
     "@fastify/session": "^10.9.0",
     "@prisma/client": "^5.14.0",
     "argon2": "^0.40.1",
-    "fastify": "^4.26.2",
+    "fastify": "^4.27.0",
     "node-cron": "^3.0.3",
     "pg": "^8.11.4",
     "uuid": "^9.0.1"
